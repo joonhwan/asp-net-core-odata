@@ -16,7 +16,7 @@ Content-Type: application/json
     "dateOfBirth": "1971-12-01T00:00:00+09:00"
 }
 ### 추가된 아이디는...
-@editId = 12
+@editId = 14
 
 ### 방금 추가한 항목 조회
 GET {{baseurl}}/people/{{editId}}

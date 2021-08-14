@@ -1,0 +1,34 @@
+@host = https://localhost:5001
+@baseurl = {{host}}/odata/v1
+
+## 메타데이터 확인
+GET {{baseurl}}/$metadata
+
+### OData 를 사용해 전체 항목 가져오기
+GET {{baseurl}}/people
+
+### OData 를 사용해 전체 항목 가져오기(메타데이터 최대화)
+GET {{baseurl}}/people
+Accept: application/json;odata.metadata=full
+
+### OData 를 사용해 전체 항목 가져오기(메타데이터 최소화=기본값)
+GET {{baseurl}}/people
+Accept: application/json;odata.metadata=minimal
+
+### OData 를 사용해 전체 항목 가져오기(메타데이터 없음)
+GET {{baseurl}}/people
+Accept: application/json;odata.metadata=none
+
+
+### OData 를 사용해 일부 항목 가져오기
+Get {{baseurl}}/people(1)
+
+### 위 응답메시지에 있는 context 확인
+GET {{baseurl}}/$metadata#People
+
+### VinylRecord 목록
+GET {{baseurl}}/VinylRecords
+Accept: application/json;odata.metadata=none
+
+### 특정 VinylRecord 1개
+GET {{baseurl}}/VinylRecords(1)

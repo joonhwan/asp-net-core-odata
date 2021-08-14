@@ -29,48 +29,14 @@ namespace Microsoft.Extensions.DependencyInjection
             Action<SqliteDbContextOptionsBuilder> sqliteOptionsAction = null
         )
         {
-            // serviceCollection.TryAdd(
-            //     new ServiceDescriptor(
-            //         typeof(DbContextOptions<AirVinylDbContextBase>),
-            //         p =>
-            //         {
-            //             return CreateDbContextOptions<AirVinylDbContextBase>(p, (p, b) => optionsAction?.Invoke(b));
-            //         },
-            //         ServiceLifetime.Scoped));
-            
             // context 가 base class를 가지는 이런경우에는 AddDbContext<TBase, TContext>()... 형태를..
-            serviceCollection.AddDbContext<AirVinylDbContext>(options =>
+            serviceCollection.AddDbContext<AirVinylDbContextBase, AirVinylDbContext>(options =>
             {
                 options.UseSqlite(connectionString);
                 options.EnableSensitiveDataLogging();
             });
-            // serviceCollection.AddScoped<AirVinylDbContextBase>(provider =>
-            //     provider.GetRequiredService<AirVinylDbContext>());
+            
             return serviceCollection;
-        }
-        
-        private static void ConfigureSqlite(DbContextOptionsBuilder options)
-        {
-            string postgresSqlConnectionString = "Host=localhost;Database=PeopleDatabase;Username=postgres;Password=example";
-
-            options.UseSqlite(postgresSqlConnectionString);
-            options.EnableSensitiveDataLogging();
-        }
-        
-        
-        private static DbContextOptions<TContext> CreateDbContextOptions<TContext>(
-            IServiceProvider applicationServiceProvider,
-            Action<IServiceProvider, DbContextOptionsBuilder> optionsAction)
-            where TContext : DbContext
-        {
-            var builder = new DbContextOptionsBuilder<TContext>(
-                new DbContextOptions<TContext>(new Dictionary<Type, IDbContextOptionsExtension>()));
-
-            builder.UseApplicationServiceProvider(applicationServiceProvider);
-
-            optionsAction?.Invoke(applicationServiceProvider, builder);
-
-            return builder.Options;
         }
     }
 }

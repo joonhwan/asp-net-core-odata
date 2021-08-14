@@ -7,15 +7,15 @@ using AirVinyl.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace AirVinyl.ApiService.Controllers
+namespace AirVinyl.ApiService.Controllers.Api.V1
 {
     [ApiController]
     [Route("/api/v1/people")]
     public class PeopleController : ControllerBase
     {
-        private readonly AirVinylDbContext _context;
+        private readonly AirVinylDbContextBase _context;
 
-        public PeopleController(AirVinylDbContext context)
+        public PeopleController(AirVinylDbContextBase context)
         {
             _context = context;
         }

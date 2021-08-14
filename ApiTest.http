@@ -1,0 +1,39 @@
+@host = https://localhost:5001
+@baseurl = {{host}}/api/v1
+
+### 전체 목록 
+GET {{baseurl}}/people
+
+### 새로운 항목 추가
+POST {{baseurl}}/people
+Content-Type: application/json
+
+{
+    "email": "Yamashita@yamero.com",
+    "gender": 1,
+    "firstName": "Yamashita",
+    "lastName": "Konzo",
+    "dateOfBirth": "1971-12-01T00:00:00+09:00"
+}
+### 추가된 아이디는...
+@editId = 12
+
+### 방금 추가한 항목 조회
+GET {{baseurl}}/people/{{editId}}
+
+### 방금 추가한 항목 수정
+PUT {{baseurl}}/people/{{editId}}
+Content-Type: application/json
+
+{
+    "firstName": "Bruce",
+    "lastName": "Lee"
+}
+
+### 방금 변경한 항목 조회
+GET {{baseurl}}/people/{{editId}}
+
+### 방금 추가한 항목 삭제
+DELETE {{baseurl}}/people/{{editId}}
+
+### 

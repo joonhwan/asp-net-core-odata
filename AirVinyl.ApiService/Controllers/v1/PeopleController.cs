@@ -20,14 +20,27 @@ namespace AirVinyl.ApiService.Controllers
             _context = context;
         }
 
-        // 아래 CreatedAtRoute() 에서 사용할 "Route" Name 으로 "GetPerson" 을 지정
-        [HttpGet(Name="GetPerson")]  
+        [HttpGet()]  
         public async Task<ActionResult<IList<Person>>> Get()
         {
             var result = await _context.People.ToListAsync();
             return Ok(result);
         }
 
+        // 아래 CreatedAtRoute() 에서 사용할 "Route" Name 으로 "GetPerson" 을 지정
+        [HttpGet("{personId}",Name="GetPerson")]
+        public async Task<ActionResult<Person>> Get(int personId)
+        {
+            var found = await _context.People.FirstOrDefaultAsync(person => person.PersonId == personId);
+            if (found == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(found);
+        }
+
+        // 아래 CreatedAtRoute() 에서 사용할 "Route" Name 으로 "GetPerson" 을 지정
         [HttpPost]
         public async Task<ActionResult<PersonViewModel>> Post(PersonForCreation model)
         {
@@ -36,7 +49,7 @@ namespace AirVinyl.ApiService.Controllers
             // Rest API 에서 Post로 생성된 것에 대해 통상 생성된 Resource에 접근할 수 있는 방법을 
             // 반환하는 ... 
             await _context.SaveChangesAsync();
-            return CreatedAtRoute("GetPerson", new { personId=result.Entity.PersonId });
+            return CreatedAtRoute("GetPerson", new { result.Entity.PersonId }, result.Entity);
         }
 
         [HttpPut("{personId}")]

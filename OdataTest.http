@@ -5,10 +5,10 @@
 GET {{baseurl}}/$metadata
 
 ### OData 를 사용해 전체 항목 가져오기
-GET {{baseurl}}/people
+GET {{baseurl}}/People
 
 ### OData 를 사용해 전체 항목 가져오기(메타데이터 최대화)
-GET {{baseurl}}/people
+GET {{baseurl}}/People?$Skip=1
 Accept: application/json;odata.metadata=full
 
 ### OData 를 사용해 전체 항목 가져오기(메타데이터 최소화=기본값)
@@ -32,3 +32,16 @@ Accept: application/json;odata.metadata=none
 
 ### 특정 VinylRecord 1개
 GET {{baseurl}}/VinylRecords(1)
+
+
+## --------------
+
+### Person 과 Relation맺은 VinylRecords 까지 가져오는 
+GET {{baseurl}}/People(1)/VinylRecords
+
+
+### -------------
+
+
+### 모든 Person 의 Id,Email 주소만 select
+GET {{baseurl}}/People?$select=PersonId,Email

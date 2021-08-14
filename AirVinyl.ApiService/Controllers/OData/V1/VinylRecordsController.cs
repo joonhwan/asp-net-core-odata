@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AirVinyl.ApiService.Controllers.OData.V1
 {
-    // [Route("odata/v1")]
     public class VinylRecordsController : ODataController
     {
         private readonly AirVinylDbContextBase _dbContext;

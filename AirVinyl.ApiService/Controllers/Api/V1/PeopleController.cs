@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AirVinyl.ApiService.Controllers.Api.V1
 {
     [ApiController]
-    [Route("/api/v1/people")]
+    [Route("api/v1/people")]
     public class PeopleController : ControllerBase
     {
         private readonly AirVinylDbContextBase _context;

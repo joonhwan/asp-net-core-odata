@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AirVinyl.DataAccess;
 using AirVinyl.DataAccess.Sqlite;
 using AirVinyl.Entities;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.AspNetCore.OData.Routing.Controllers;
@@ -14,11 +15,11 @@ namespace AirVinyl.ApiService.Controllers.OData.V1
 {
     public class PeopleController : ODataController
     {
-        private readonly AirVinylDbContextBase _context;
+        private readonly AirVinylDbContextBase _dbContext;
 
-        public PeopleController(AirVinylDbContextBase context)
+        public PeopleController(AirVinylDbContextBase dbContext)
         {
-            _context = context;
+            _dbContext = dbContext;
         }
 
         // [HttpGet()]  
@@ -27,26 +28,43 @@ namespace AirVinyl.ApiService.Controllers.OData.V1
         //     var result = await _context.People.ToListAsync();
         //     return Ok(result);
         // }
-        [EnableQuery]
         [HttpGet]
+        [EnableQuery]
         public IActionResult Get() 
         {
-            return Ok(_context.People);
+            return Ok(_dbContext.People);
         }
         
-        
-        // 아래 CreatedAtRoute() 에서 사용할 "Route" Name 으로 "GetPerson" 을 지정
-        [EnableQuery]
-        [HttpGet] // "{personId}" 이런게 필요없다. EDM 모델에서 확인되니까. 대신, 반드시 인자명은 "key" 로 해야 함
-        public IActionResult Get(int key)
-        {
-            var found = _context.People.FirstOrDefault(person => person.PersonId == key);
-            if (found == null)
-            {
-                return NotFound();
-            }
-            return Ok(found);
-        }
+        //
+        //
+        // // 아래 CreatedAtRoute() 에서 사용할 "Route" Name 으로 "GetPerson" 을 지정
+        // [EnableQuery]
+        // [HttpGet] // "{personId}" 이런게 필요없다. EDM 모델에서 확인되니까. 대신, 반드시 인자명은 "key" 로 해야 함
+        // public IActionResult Get(int key)
+        // {
+        //     var found = _context.People.FirstOrDefault(person => person.PersonId == key);
+        //     if (found == null)
+        //     {
+        //         return NotFound();
+        //     }
+        //     return Ok(found);
+        // }
+        //
+        // [HttpGet("odata/v1/People({key})/VinylRecords")]
+        // public IActionResult GetVinylRecordsOfPerson(int key)
+        // {
+        //     var reqUrl = new Uri(HttpContext.Request.GetEncodedUrl());
+        //
+        //     var found = _context.People
+        //             .Include(person => person.VinylRecords)
+        //             .FirstOrDefault(person => person.PersonId == key)
+        //         ;
+        //     if (found == null)
+        //     {
+        //         return NotFound();
+        //     }
+        //     return Ok(found.VinylRecords);
+        // }
         
         // // 아래 CreatedAtRoute() 에서 사용할 "Route" Name 으로 "GetPerson" 을 지정
         // [HttpPost]

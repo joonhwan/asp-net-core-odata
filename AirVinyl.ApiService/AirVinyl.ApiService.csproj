@@ -19,11 +19,6 @@
 
     <ItemGroup>
       <Folder Include="Controllers\Api" />
-      <Folder Include="Controllers\Api\V1" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Compile Remove="Controllers\Api\V1\PeopleController.cs" />
     </ItemGroup>
 
 </Project>

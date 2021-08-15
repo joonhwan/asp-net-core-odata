@@ -41,7 +41,8 @@ namespace AirVinyl.ApiService
                 // @ OData
                 .AddOData(option =>
                 {
-                    option.Count().Filter().Expand().Select().OrderBy().SetMaxTop(5);
+                    // option.Count().Filter().Expand().Select().OrderBy().SkipToken().SetMaxTop(1000);
+                    option.EnableQueryFeatures(1000);
                     
                     // OData의 기본 Routing Rule을 따르지 않고, 명시적으로 Controller에 
                     // [Route("odata/v1/people")] 같은 Attribute로 Routing하게 되면, 

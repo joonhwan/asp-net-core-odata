@@ -1,47 +1,272 @@
 @host = https://localhost:5001
 @baseurl = {{host}}/odata/v1
 
-## 메타데이터 확인
+## -------- OData API 테스트 
+#  
+#   serviceCollection.AddDbContext<AirVinylDbContextBase, AirVinylDbContext>(options =>
+#            {
+#                options.UseSqlite(connectionString);
+#                options.EnableSensitiveDataLogging();
+#            });
+#   --> 처럼 초기화 하고, Log Level을 Informatino으로 조정했다면,
+#       아래 API 요청시, DB로 실제 어떤 Query가 전송되는지 확인할 수 있음. 
+# 
+
+## --------  기본 조회.
+
 GET {{baseurl}}/$metadata
-
-### OData 를 사용해 전체 항목 가져오기
-GET {{baseurl}}/People
-
-### OData 를 사용해 전체 항목 가져오기(메타데이터 최대화)
-GET {{baseurl}}/People?$Skip=1
-Accept: application/json;odata.metadata=full
-
-### OData 를 사용해 전체 항목 가져오기(메타데이터 최소화=기본값)
-GET {{baseurl}}/people
-Accept: application/json;odata.metadata=minimal
-
-### OData 를 사용해 전체 항목 가져오기(메타데이터 없음)
-GET {{baseurl}}/people
-Accept: application/json;odata.metadata=none
-
-
-### OData 를 사용해 일부 항목 가져오기
-Get {{baseurl}}/people(1)
 
 ### 위 응답메시지에 있는 context 확인
 GET {{baseurl}}/$metadata#People
 
+### 전체 항목 가져오기
+GET {{baseurl}}/People
+
+### key(이 경우, personId) 가 1 인 항목 보기. - OData 스타일
+GET {{baseurl}}/People(1)
+
+### key(이 경우, personId) 가 1 인 항목 보기 - 통상 Rest API 스타일
+GET {{baseurl}}/People/1
+
 ### VinylRecord 목록
 GET {{baseurl}}/VinylRecords
 Accept: application/json;odata.metadata=none
+Content-Encoding: gzip
 
 ### 특정 VinylRecord 1개
 GET {{baseurl}}/VinylRecords(1)
 
+# -----------  $select 데모 
 
-## --------------
+###
+# 전체 항목 가져오되, Email, FirstName, LastName 만 가져오기
+# --> 아래 코드는 EF Core로 하여금 실제로.. 아래같은 필요한 필드만 질의하게함.
+# 
+#  Microsoft.EntityFrameworkCore.Database.Command[20101]
+#      Executed DbCommand (13ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+#     SELECT "p"."Email", "p"."FirstName", "p"."LastName", "p"."PersonId"
+#      FROM "People" AS "p"
+#
+###
+GET {{baseurl}}/People?$select=Email,FirstName,LastName
 
-### Person 과 Relation맺은 VinylRecords 까지 가져오는 
-GET {{baseurl}}/People(1)/VinylRecords
+### key(이 경우, personId) 가 1 인 항목을 조회하되, Email만.
+GET {{baseurl}}/People(1)?$select=Email
+
+### key(이 경우, personId) 가 1 인 항목을 조회하되, Email, FistName만.
+GET {{baseurl}}/People/1?$select=Email,FirstName
+
+### 전체 항목 가져오기(메타데이터 없음)
+GET {{baseurl}}/people
+Accept: application/json;odata.metadata=none
+
+### 전체 항목 가져오기(메타데이터 최소화=기본값)
+GET {{baseurl}}/people
+Accept: application/json;odata.metadata=minimal
+
+### 전체 항목 가져오기(메타데이터 최대화)
+GET {{baseurl}}/People
+Accept: application/json;odata.metadata=full
+
+### -----------------  $expand, $top Demo 
+# $expand 는 Entity간 관계에 의해서 생성되는 "Navigation 속성"까지 채운다.
+# (예: Blog -> Blog.Articles,  Author -> Author.Ariticles)
+
+### 전체조회하되, Person 별 소유하고 있는 VinylRecords 목록까지 포함. 
+GET {{baseurl}}/people?$expand=VinylRecords&$top=1
+
+### 비교.
+GET {{baseurl}}/people?$top=1
+
+### 중첩된 $expand 도 가능
+#  Person -> Person.VinylRecord -> Person.VinylRecord.PressingDetail
+# --> 너무 깊은 단계까지 허용하면, IO 가 많아질 수 있다. 
+# [EnableQuery(MaxExpansionDepth = 3)] 같은 Attribute 로 제어가능
+# --> 너무 깊은 $expand 요청시 400 ERROR 가 반환.
+GET {{baseurl}}/people?$expand=VinylRecords($expand=PressingDetail)
+
+### $expand의 충첩 수준 제한 
+# [EnableQuery(MaxExpansionDepth = 1)] 같은 Attribute 로 제어가능
+GET {{baseurl}}/people?$expand=VinylRecords($expand=PressingDetail)
+
+### $select 와 $expand 로 원하는 데이터 형태 가져오기 
+# - Person은 Email, FirstName 만
+# - Person별 VinylRecord는 Title, Year 만 
+# 가지오는 경우....
+#  ($expand 된 요소의 경우 괄호안에 $select 요청문을 넣는점 유의)
+# 
+# --> 이 경우 WebAPI 서비스내  EF Core가 생성하는 질의문을 확인해보자.
+#
+GET {{baseurl}}/people
+    ?$select=Email,FirstName
+    &$expand=VinylRecords($select=Title,Year)
+
+### 목록이 아니라 특정 Person에 대한 질의도 마찬가지
+# PascalCase 든 camelCase든 상관 없음도 확인(대소문자 구분 X)
+GET {{baseurl}}/people(1)
+    ?$select=email,firstName
+    &$expand=vinylRecords($select=title,year)
+
+### ----------------- $order
+# 
+#  지정한 필드에 대한 정렬(오름차순, 내림차순). 
+#  안타깝게도 대소문자 구분안하는 정렬이..
+### 오름차순 
+GET {{baseurl}}/people
+    ?$orderBy=email
+
+### 내림차순
+GET {{baseurl}}/people
+    ?$orderBy=email desc
+
+### 여러 정렬조건 /w $expand, $select 을 모두 사용하는 예
+#  VinylRecord같이 $expand 된 모델에대한 추가 쿼리작성시에는 
+#  "&" 문자가 아니라 ";" 문자를 사용하는 점에 유의!!!!
+GET {{baseurl}}/people
+    ?$orderBy=Gender desc, Email desc
+    &$expand=VinylRecords($orderBy=Title;$select=title)
+
+### ---------- $top 과 &skip
+#
+#  전체 질의 결과 중 일부만 표시.
+#
+GET {{baseurl}}/people?$select=Email&$top=2
+
+### 검색결과 처음 2개만 반환
+GET {{baseurl}}/people?$select=Email
+    &$top=2
+
+### 검색결과 처음 2개 Skip, 그다음 2개만 반환
+GET {{baseurl}}/people?$select=Email
+    &$top=2
+    &$skip=2
+
+### Startup.cs 에서 지정한 MaxTop보다 더 큰 숫자는 $top 에 사용불가
+# (현재 options.SetMaxTop(5) 로 설정됨)
+GET {{baseurl}}/people?$top=6
+
+###  ----------- Pagination : Client Driven Paging ($top, $skip, $count)
+#
+#  서버에서 해당 모델 전체 목록을 가져오는 것은 너무 무거움
+#    -> 페이지당 N개로 제한 두어, 1페이지씩 조회하는 것 = "Paging" or "Pagination"
+#  
+#  
+#  - $top : "페이지당 항목수"
+#  - $skip : "표시할 페이지 x 페이지당 항목수 " (페이지 = 0, 1, 2 ...)
+#  - $count : 전체 항목 갯수 표시
+#  
+#  cf. 위 사용방식은 소위 "Client Driven Paging"임. 
+#      "Server Driven Paging" 도 있기는 함. 
+# 
+# 조회 조건(ex: orderBy, filtering, ...) 이 있다면 그것이 적용된 상태에서 
+# paging 됨. 
+#
+#
+GET {{baseurl}}/People
+    ?$Top=2
+    &$Skip=0
+    &$count=true
+    &$orderBy=FirstName
+    &$filter=Gender eq 'Female'
+
+### ---------- $filter : 기본
+#
+### 필드값을 사용한 filtering
+GET {{baseurl}}/people
+    ?$filter=firstName eq 'Kevin'
+
+### 비교 연산자 - gt(>), lt(<), ge(>=), le(<=), eq(==), ne(!=)
+GET {{baseurl}}/people
+    ?$filter=personId gt 2
+
+### 논리 연삭자 - and, or 
+GET {{baseurl}}/people
+    ?$filter=personId gt 2 and personId le 4
+
+### DateTime 에 대한 비교연산 가능(시간 부분 생략)
+GET {{baseurl}}/people
+    ?filter=dateOfBirth le 1981-05-05
+
+### DateTime 에 대한 비교연산 가능(시간 부분 포함) 
+#   시간 문자열 표시는 ISO 표준 : 
+#     - 1981-05-05T00:00:00+09:00 : +09:00 은 Time Zome
+#     - 1981-05-05T00:00:00Z : Z 면 UTC 
+#   
+# https://metomi.github.io/rose/2019.01.2/html/tutorial/cylc/scheduling/datetime-cycling.html
+#   
+# 참고:  C# 타입으로는 DateTime 이 아니라 DateTimeOffset(=DateTime + TimeZone)     
+# 
+# 하지만 아래 예는 SQLite 에서는 오류가 생긴다. DB쿼리상에서 시간 비교하는 부분이
+# 가능하지 않기때문(SQLite는 시간개념의 데이터 타입이 없음)
+GET {{baseurl}}/people 
+    ?$filter=DateOfBirth le 1977-12-27T00:00:00Z
+
+### Enum 의 경우.. 단순히 문자열로 하지만,
+GET {{baseurl}}/people
+    ?$filter=Gender eq 'Female'
+
+### Enum 은 구체적인 타입의 명칭(Namespace포함) 하여 표시하는 게 가능
+GET {{baseurl}}/people
+    ?$filter=Gender eq AirVinyl.Entities.Gender'Male'
+
+### expand 된 Navigation 속성에 대한 filter는 괄호안에서 수행
+#   아래 예는 소유한 LP판중 2000년도 이후 나온 것만 포함.
+GET {{baseurl}}/people
+    ?$expand=VinylRecords($filter=Year ge 2000)
+    &$filter=personId lt 3
+    
+### Nested 연산 가능 ..
+#   그냥 괄호를 사용하면 됨.
+GET {{baseurl}}/people
+    ?$filter=(Gender eq 'Male' and PersonId lt 5) or Gender eq 'Female'
+
+### not 연산
+#   반드시 괄호로 묶인 연산 앞에서만
+GET {{baseurl}}/people
+    ?$filter=not (Gender eq 'Male' and PersonId lt 5)
+
+### null 검사
+GET {{baseurl}}/people
+    ?$expand=VinylRecords($filter=Year eq null)
+    &$filter=personId lt 3
+
+### --------- $filter : Labmda Expression
+
+### Relational Entity의 속성으로 filtering
+#   People.VinylRecord.PressingDetail.Grams
+#   주의 : $expand 로 확장된 모델에 대한 Query Parameter는 "&" 문자가 아니라 ";" 문자를 사용.
+GET {{baseurl}}/people
+    ?$expand=VinylRecords($expand=PressingDetail;$filter=PressingDetail/Grams ge 100)
 
 
-### -------------
+### 복잡한 Lambda Expression 도 가능
+#  아래는 Person들 중 Abba 가 발매한 LP판을 가지는 사람들 만(!!!) 
+#  필터링한다. 
+#  `vr' 부분은 any() 함수의 인자로 넘어온 VinylRecords 의 각 항목을 의미한다. 
+GET {{baseurl}}/people
+    ?$filter=VinylRecords/any(vr:vr/Artist eq 'Abba')
+    &$expand=VinylRecords
+    
+### ---------- $filter : 산술연산자 
+# 
+#  
+###  AmountOfCashToSpend / NumberOfRecordsOnWishLit 의 값이 10 보다 큰 ...
+GET {{baseurl}}/people
+    ?$filter=(numberOfRecordsOnWishList ne 0) and ((amountOfCashToSpend div numberOfRecordsOnWishList) gt 10)
 
 
-### 모든 Person 의 Id,Email 주소만 select
-GET {{baseurl}}/People?$select=PersonId,Email
+### ---------- $filtering : Canonical Functino
+# 
+#### - startsWith(), endsWith() : 문자열 내용 비교
+GET {{baseurl}}/people
+    ?$filter=endsWith(FirstName, 'n')
+
+### - lenght() : 문자열 길이 비교
+GET {{baseurl}}/people
+    ?$filter=length(email) eq 26
+
+### - year() : 시간 문자열 
+#
+#   NOTE : SQLite 와 같이 Date Time을 표시하는 타입이 없는 DB를 쓰는 경우 오류
+GET {{baseurl}}/people
+    ?$filter=year(dateOfBirth) eq 1981

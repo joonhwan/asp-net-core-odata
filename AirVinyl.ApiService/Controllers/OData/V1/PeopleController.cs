@@ -8,6 +8,7 @@ using AirVinyl.Entities;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
+using Microsoft.AspNetCore.OData.Results;
 using Microsoft.AspNetCore.OData.Routing.Controllers;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,42 +30,64 @@ namespace AirVinyl.ApiService.Controllers.OData.V1
         //     return Ok(result);
         // }
         [HttpGet]
+        // [EnableQuery(PageSize = 2)] // --> Server Side Paging
         [EnableQuery]
         public IActionResult Get() 
         {
             return Ok(_dbContext.People);
         }
         
-        //
-        //
-        // // 아래 CreatedAtRoute() 에서 사용할 "Route" Name 으로 "GetPerson" 을 지정
-        // [EnableQuery]
-        // [HttpGet] // "{personId}" 이런게 필요없다. EDM 모델에서 확인되니까. 대신, 반드시 인자명은 "key" 로 해야 함
-        // public IActionResult Get(int key)
-        // {
-        //     var found = _context.People.FirstOrDefault(person => person.PersonId == key);
-        //     if (found == null)
-        //     {
-        //         return NotFound();
-        //     }
-        //     return Ok(found);
-        // }
-        //
-        // [HttpGet("odata/v1/People({key})/VinylRecords")]
-        // public IActionResult GetVinylRecordsOfPerson(int key)
-        // {
-        //     var reqUrl = new Uri(HttpContext.Request.GetEncodedUrl());
-        //
-        //     var found = _context.People
-        //             .Include(person => person.VinylRecords)
-        //             .FirstOrDefault(person => person.PersonId == key)
-        //         ;
-        //     if (found == null)
-        //     {
-        //         return NotFound();
-        //     }
-        //     return Ok(found.VinylRecords);
-        // }
+        // 아래 CreatedAtRoute() 에서 사용할 "Route" Name 으로 "GetPerson" 을 지정
+        // [EnableQuery(MaxExpansionDepth = 3, MaxSkip = 11, MaxTop = 10)] // --> 개별 Action의 ODat 질의 제한 가능.
+        [EnableQuery]
+        [HttpGet] // "{personId}" 이런게 필요없다. EDM 모델에서 확인되니까. 대신, 반드시 인자명은 "key" 로 해야 함
+        public IActionResult Get(int key)
+        {
+            // var found = _dbContext.People.FirstOrDefault(person => person.PersonId == key);
+            // if (found == null)
+            // {
+            //     return NotFound();
+            // }
+            // return Ok(found);
+            
+            // 위 코드와 아래코드의 차이점.
+            // --> $select 등 OData Query Parameter에 의해 실제 DB에 질의하는 질의문이 , 클라이언트측 
+            //     요청에 의해 더 tuning된다. (예: 필요한 필드만 SELECT 한다)
+
+            var found = _dbContext.People.Where(person => person.PersonId == key);
+            if (!found.Any())
+            {
+                return NotFound();
+            }
+
+            return Ok(SingleResult.Create(found));
+        }
+        
+        [EnableQuery]
+        [HttpGet("odata/v1/People({key})/VinylRecords")]
+        public IActionResult GetVinylRecordsOfPerson(int key)
+        {
+            // var found = _dbContext.People
+            //         .Include(person => person.VinylRecords)
+            //         .FirstOrDefault(person => person.PersonId == key)
+            //     ;
+            // if (found == null)
+            // {
+            //     return NotFound();
+            // }
+            // return Ok(found.VinylRecords);
+            
+            // ---- 
+            // DB 쿼리 개선되도록 수정하면...
+            // ----
+
+            var found = _dbContext.People.Where(person => person.PersonId == key);
+            if (!found.Any())
+            {
+                return NotFound();
+            }
+            return Ok(_dbContext.VinylRecords.Where(record => record.PersonId==key));
+        }
         
         // // 아래 CreatedAtRoute() 에서 사용할 "Route" Name 으로 "GetPerson" 을 지정
         // [HttpPost]

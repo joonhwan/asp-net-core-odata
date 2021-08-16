@@ -12,62 +12,6 @@
 #       아래 API 요청시, DB로 실제 어떤 Query가 전송되는지 확인할 수 있음. 
 # 
 
-## --------  기본 조회.
-
-GET {{baseurl}}/$metadata
-
-### 위 응답메시지에 있는 context 확인
-GET {{baseurl}}/$metadata#People
-
-### 전체 항목 가져오기
-GET {{baseurl}}/People
-
-### key(이 경우, personId) 가 1 인 항목 보기. - OData 스타일
-GET {{baseurl}}/People(1)
-
-### key(이 경우, personId) 가 1 인 항목 보기 - 통상 Rest API 스타일
-GET {{baseurl}}/People/1
-
-### VinylRecord 목록
-GET {{baseurl}}/VinylRecords
-Accept: application/json;odata.metadata=none
-Content-Encoding: gzip
-
-### 특정 VinylRecord 1개
-GET {{baseurl}}/VinylRecords(1)
-
-# -----------  $select 데모 
-
-###
-# 전체 항목 가져오되, Email, FirstName, LastName 만 가져오기
-# --> 아래 코드는 EF Core로 하여금 실제로.. 아래같은 필요한 필드만 질의하게함.
-# 
-#  Microsoft.EntityFrameworkCore.Database.Command[20101]
-#      Executed DbCommand (13ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
-#     SELECT "p"."Email", "p"."FirstName", "p"."LastName", "p"."PersonId"
-#      FROM "People" AS "p"
-#
-###
-GET {{baseurl}}/People?$select=Email,FirstName,LastName
-
-### key(이 경우, personId) 가 1 인 항목을 조회하되, Email만.
-GET {{baseurl}}/People(1)?$select=Email
-
-### key(이 경우, personId) 가 1 인 항목을 조회하되, Email, FistName만.
-GET {{baseurl}}/People/1?$select=Email,FirstName
-
-### 전체 항목 가져오기(메타데이터 없음)
-GET {{baseurl}}/people
-Accept: application/json;odata.metadata=none
-
-### 전체 항목 가져오기(메타데이터 최소화=기본값)
-GET {{baseurl}}/people
-Accept: application/json;odata.metadata=minimal
-
-### 전체 항목 가져오기(메타데이터 최대화)
-GET {{baseurl}}/People
-Accept: application/json;odata.metadata=full
-
 ### -----------------  $expand, $top Demo 
 # $expand 는 Entity간 관계에 의해서 생성되는 "Navigation 속성"까지 채운다.
 # (예: Blog -> Blog.Articles,  Author -> Author.Ariticles)
@@ -255,7 +199,7 @@ GET {{baseurl}}/people
     ?$filter=(numberOfRecordsOnWishList ne 0) and ((amountOfCashToSpend div numberOfRecordsOnWishList) gt 10)
 
 
-### ---------- $filtering : Canonical Functino
+### ---------- $filtering : Canonical Function
 # 
 #### - startsWith(), endsWith() : 문자열 내용 비교
 GET {{baseurl}}/people
@@ -270,3 +214,25 @@ GET {{baseurl}}/people
 #   NOTE : SQLite 와 같이 Date Time을 표시하는 타입이 없는 DB를 쓰는 경우 오류
 GET {{baseurl}}/people
     ?$filter=year(dateOfBirth) eq 1981
+
+### ------- $filtering : Iterator (&it)
+# 
+# $filter 적용시, collection항목 각각의 속성값이 아니라 
+# 항목 그자체의 값을 써야 하는 경우 $it 를 사용할 수 있다. 
+#
+### 
+GET {{baseurl}}/recordstores(1)/tags?$filter=startsWith($it, 'R')
+
+# 
+#
+### --------- Containment 
+#  아래와 같은 걸 구현하려면, 별도로 Controller에 Action Method를 구현할 
+# 필요가 생긴다(해놓으면 편하긴 하다)
+GET {{baseurl}}/people(1)/vinylrecords(2)
+
+# 다음의 예는 별도의 Action Method 없이, 순수 OData Query 만으로 위와 동일한
+# 수준의 결과를 얻을 수 있다. 
+GET {{baseurl}}/people(1)
+    ?$select=vinylrecords
+    &$expand=vinylrecords($filter=vinylRecordId eq 2)
+    

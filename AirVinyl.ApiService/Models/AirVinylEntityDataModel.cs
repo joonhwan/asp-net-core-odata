@@ -14,7 +14,8 @@ namespace AirVinyl.ApiService.Controllers
             // 단수 type -> 복수형 Set이름
             builder.EntitySet<Person>(name: "People");
             builder.EntitySet<VinylRecord>(name: "VinylRecords");
-
+            builder.EntitySet<RecordStore>(name: "RecordStores");
+            
             return builder.GetEdmModel();
         }
     }

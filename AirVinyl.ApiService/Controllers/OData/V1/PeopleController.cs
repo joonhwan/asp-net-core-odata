@@ -1,14 +1,12 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AirVinyl.DataAccess;
-using AirVinyl.DataAccess.Sqlite;
 using AirVinyl.Entities;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Deltas;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.AspNetCore.OData.Results;
+using Microsoft.AspNetCore.OData.Routing.Attributes;
 using Microsoft.AspNetCore.OData.Routing.Controllers;
 using Microsoft.EntityFrameworkCore;
 
@@ -60,8 +58,92 @@ namespace AirVinyl.ApiService.Controllers.OData.V1
                 return NotFound();
             }
 
-            return Ok(SingleResult.Create(found));
+            return Ok(SingleResult.Create(found)); // ODataController가 제공하는 Response함수
         }
+        
+        
+        [HttpPost]
+        public async Task<IActionResult> Post([FromBody] Person person)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // add the person to the People collection
+            _dbContext.People.Add(person);
+            await _dbContext.SaveChangesAsync();
+
+            // return the created person 
+            return Created(person); // ODataController가 제공하는 Response함수
+        }
+        
+        [HttpPut]
+        public async Task<IActionResult> Put(int key, [FromBody] Delta<Person> person)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var currentPerson = await _dbContext.People
+                .FirstOrDefaultAsync(p => p.PersonId == key);
+
+            if (currentPerson == null)
+            {
+                // 여기서 Upsert() 를 생각해봄직(Key 를 Client에서 만들 수 있다면.)
+                return NotFound(); 
+            }
+
+            // Put() 은 PersonId 입력이 없는 경우 기본값 0 까지 복사(CopyUnchangedValues()에 의해..)
+            person.TrySetPropertyValue(nameof(currentPerson.PersonId), currentPerson.PersonId);
+            // Put() 동작
+            person.Put(currentPerson);
+            
+            await _dbContext.SaveChangesAsync();
+
+            return Updated(currentPerson); // ODataController가 제공하는 Response함수
+        }
+        
+        
+        [HttpPatch]
+        public async Task<IActionResult> Patch(int key, [FromBody] Delta<Person> patch)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var currentPerson = await _dbContext.People
+                .FirstOrDefaultAsync(p => p.PersonId == key);
+
+            if (currentPerson == null)
+            {
+                return NotFound();
+            }
+
+            patch.Patch(currentPerson);
+            await _dbContext.SaveChangesAsync();
+
+            return Updated(currentPerson); // ODataController가 제공하는 Response함수
+        }
+        
+        [HttpDelete]
+        public async Task<IActionResult> Delete(int key)
+        {
+            var currentPerson = await _dbContext.People
+                .FirstOrDefaultAsync(p => p.PersonId == key);
+
+            if (currentPerson == null)
+            {
+                return NotFound();
+            }
+
+            _dbContext.People.Remove(currentPerson);
+            await _dbContext.SaveChangesAsync();
+            return NoContent();
+        }
+        
         
         [EnableQuery]
         [HttpGet("odata/v1/People({key})/VinylRecords")]
@@ -89,58 +171,18 @@ namespace AirVinyl.ApiService.Controllers.OData.V1
             return Ok(_dbContext.VinylRecords.Where(record => record.PersonId==key));
         }
         
-        // // 아래 CreatedAtRoute() 에서 사용할 "Route" Name 으로 "GetPerson" 을 지정
-        // [HttpPost]
-        // public async Task<ActionResult<PersonViewModel>> Post(PersonForCreation model)
-        // {
-        //     var entity = model.ToEntity();
-        //     var result = await _context.People.AddAsync(entity);
-        //     // Rest API 에서 Post로 생성된 것에 대해 통상 생성된 Resource에 접근할 수 있는 방법을 
-        //     // 반환하는 ... 
-        //     await _context.SaveChangesAsync();
-        //     return CreatedAtRoute("GetPerson", new { result.Entity.PersonId }, result.Entity);
-        // }
-        //
-        // [HttpPut("{personId}")]
-        // public async Task<ActionResult> Put(int personId, PersonEditModel person)
-        // {
-        //     var found = await _context.People.FirstOrDefaultAsync(person => person.PersonId == personId);
-        //     if (found == null)
-        //     {
-        //         return NotFound();
-        //     }
-        //
-        //     person.Update(found);
-        //     _context.People.Update(found);
-        //     await  _context.SaveChangesAsync();
-        //
-        //     return NoContent();
-        // }
-        //
-        // [HttpDelete("{personId}")]
-        // public async Task<ActionResult> Delete(int personId)
-        // {
-        //     var found = await _context.People.FirstOrDefaultAsync(person => person.PersonId == personId);
-        //     if (found == null)
-        //     {
-        //         return NotFound( new {
-        //             Message = $"No Person of Id(={personId}) !" 
-        //         });
-        //     }
-        //
-        //     try
-        //     {
-        //         _context.Remove(found);
-        //         await _context.SaveChangesAsync();
-        //         return NoContent();
-        //     }
-        //     catch (Exception)
-        //     {
-        //         // no-op
-        //     }
-        //
-        //     return NoContent();
-        // }
-
+        // Containment
+        
+        [EnableQuery]
+        [HttpGet("odata/v1/People({key})/VinylRecords({vrKey})")]
+        public IActionResult GetVinylRecordsOfPerson(int key, int vrKey)
+        {
+            var found = _dbContext.People.Where(person => person.PersonId == key);
+            if (!found.Any())
+            {
+                return NotFound();
+            }
+            return Ok(_dbContext.VinylRecords.Where(record => record.PersonId==key && record.VinylRecordId == vrKey));
+        }
     }
 }

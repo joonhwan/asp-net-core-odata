@@ -1,0 +1,147 @@
+@host = https://localhost:5001
+@baseurl = {{host}}/odata/v1
+
+## -------- OData API 테스트 
+#  
+#   serviceCollection.AddDbContext<AirVinylDbContextBase, AirVinylDbContext>(options =>
+#            {
+#                options.UseSqlite(connectionString);
+#                options.EnableSensitiveDataLogging();
+#            });
+#   --> 처럼 초기화 하고, Log Level을 Informatino으로 조정했다면,
+#       아래 API 요청시, DB로 실제 어떤 Query가 전송되는지 확인할 수 있음. 
+# 
+
+## --------  기본 조회.
+
+GET {{baseurl}}/$metadata
+
+### 위 응답메시지에 있는 context 확인
+GET {{baseurl}}/$metadata#People
+
+### 전체 항목 가져오기
+GET {{baseurl}}/People
+Accept-Encoding: gzip
+
+### key(이 경우, personId) 가 1 인 항목 보기. - OData 스타일
+GET {{baseurl}}/People(1)
+
+### key(이 경우, personId) 가 1 인 항목 보기 - 통상 Rest API 스타일
+GET {{baseurl}}/People/1
+
+### VinylRecord 목록
+GET {{baseurl}}/VinylRecords
+Accept: application/json;odata.metadata=none
+Content-Encoding: gzip
+
+### 특정 VinylRecord 1개
+GET {{baseurl}}/VinylRecords(1)
+
+# -----------  $select 데모 
+
+###
+# 전체 항목 가져오되, Email, FirstName, LastName 만 가져오기
+# --> 아래 코드는 EF Core로 하여금 실제로.. 아래같은 필요한 필드만 질의하게함.
+# 
+#  Microsoft.EntityFrameworkCore.Database.Command[20101]
+#      Executed DbCommand (13ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+#     SELECT "p"."Email", "p"."FirstName", "p"."LastName", "p"."PersonId"
+#      FROM "People" AS "p"
+#
+###
+GET {{baseurl}}/People?$select=Email,FirstName,LastName
+
+### key(이 경우, personId) 가 1 인 항목을 조회하되, Email만.
+GET {{baseurl}}/People(1)?$select=Email
+
+### key(이 경우, personId) 가 1 인 항목을 조회하되, Email, FistName만.
+GET {{baseurl}}/People/1?$select=Email,FirstName
+
+### 전체 항목 가져오기(메타데이터 없음)
+GET {{baseurl}}/people
+Accept: application/json;odata.metadata=none
+
+### 전체 항목 가져오기(메타데이터 최소화=기본값)
+GET {{baseurl}}/people
+Accept: application/json;odata.metadata=minimal
+
+### 전체 항목 가져오기(메타데이터 최대화)
+GET {{baseurl}}/People
+Accept: application/json;odata.metadata=full
+
+### ---------------------------------------------------------
+#
+# CRUD 확인
+#
+#
+### Person 생성
+#   --> 주의 v8.x 기준, EDM 모델에 대한 Deserialization 은 
+#       Json의 Key를 Pascal Case로 하지 않으면 안되는 경우가 있네(ex: 아래 DateOfBirth 같은 string, int, float 이외의 DateTimeOffset 같은 type)
+POST {{baseurl}}/people
+Content-Type: application/json
+
+{
+    "Email": "ethan@imf.com",
+    "FirstName": "Hunt",
+    "LastName" : "Ethan",
+    "DateOfBirth": "1981-05-05",
+    "Gender": "Male"
+}
+### 위에서 생성된 Person 항목의 id 
+@personId = 40
+
+### 위 생성내역 확인
+GET {{baseurl}}/people({{personId}})
+
+### 속성일부만 변경하는 PATCH 
+PATCH {{baseurl}}/people({{personId}})
+Content-Type: application/json
+Accept: application/json
+
+{
+    "firstName": "Hunter",
+    "amountOfCashToSpend": 1234
+}
+
+### 위 갱신내역 확인
+GET {{baseurl}}/people({{personId}})
+Accept: application/json
+# Accept-Encoding: gzip
+
+
+### PUT 의 경우는 전체 갱신. 따라서 missing된 속성이 있으면 
+### 오류가 발생한다. 모델 속성 전체 내역(key 를 제외한)이 있어야 함.
+PUT {{baseurl}}/people({{personId}})
+Content-Type: application/json
+Accept-Encoding: gzip
+Accept: application/json
+
+{
+    "Email": "ethan@imf.com",
+    "FirstName": "Huntess",
+    "LastName": "Ethan",
+    "Gender": "Female",
+    "DateOfBirth": "1975-12-12T00:00:00+09:00",
+    "NumberOfRecordsOnWishList": 5432,
+    "AmountOfCashToSpend": 1234
+}
+
+### 변경내용 확인 
+GET {{baseurl}}/people({{personId}})
+Accept: application/json
+
+
+### 방금 추가된 Person 삭제
+DELETE {{baseurl}}/people({{personId}})
+
+
+### 방금 삭제 확인
+GET {{baseurl}}/people({{personId}})
+
+
+### Relational Entity(=Navigation 속성에 의해 접근되는 데이터 모델) 추가 삭제
+### (ex: 특정 Blog 의 Articles 목록에 항목 추가.  Person에 VinylRecords 추가) 
+### 
+GET {{baseurl}}/people(1)/vinylrecords
+
+

@@ -11,7 +11,7 @@
 > dotnet ef migrations add InitialMigration  -p AirVinyl.DataAccess.Sqlite/AirVinyl.DataAccess.Sqlite.csproj -s AirVinyl.ApiService/AirVinyl.ApiService.csproj
 
 # database 에 migration 적용시 
-> dotnet ef migrations add InitialMigration  -p AirVinyl.DataAccess.Sqlite/AirVinyl.DataAccess.Sqlite.csproj -s AirVinyl.ApiService/AirVinyl.ApiService.csproj
+> dotnet ef database update InitialMigration  -p AirVinyl.DataAccess.Sqlite/AirVinyl.DataAccess.Sqlite.csproj -s AirVinyl.ApiService/AirVinyl.ApiService.csproj
 ```
 
 위에서

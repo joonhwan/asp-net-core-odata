@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AirVinyl.DataAccess", "AirV
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AirVinyl.DataAccess.Sqlite", "AirVinyl.DataAccess.Sqlite\AirVinyl.DataAccess.Sqlite.csproj", "{233E5AB6-FB30-4D6A-BCC9-25B99FC085E9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RefitClientExample", "RefitClientExample\RefitClientExample.csproj", "{DFC50EF3-279C-453C-8BD0-1B883CF24DD4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{233E5AB6-FB30-4D6A-BCC9-25B99FC085E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{233E5AB6-FB30-4D6A-BCC9-25B99FC085E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{233E5AB6-FB30-4D6A-BCC9-25B99FC085E9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DFC50EF3-279C-453C-8BD0-1B883CF24DD4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DFC50EF3-279C-453C-8BD0-1B883CF24DD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DFC50EF3-279C-453C-8BD0-1B883CF24DD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DFC50EF3-279C-453C-8BD0-1B883CF24DD4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

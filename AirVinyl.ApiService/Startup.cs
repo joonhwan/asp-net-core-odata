@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using AirVinyl.ApiService.Controllers;
 using AirVinyl.DataAccess;
 using AirVinyl.DataAccess.Sqlite;
@@ -36,6 +38,10 @@ namespace AirVinyl.ApiService
             // OData 라이브러리를 초기화. 
             services
                 .AddControllers()
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                })
                 // @ OData
                 .AddOData(option =>
                 {
@@ -67,9 +73,11 @@ namespace AirVinyl.ApiService
         {
             if (env.IsDevelopment())
             {
+                // app.UseMiddleware<RequestResponseLoggingMiddleware>();
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "AirVinyl.ApiService v1"));
+                
             }
 
             app.UseHttpsRedirection();
